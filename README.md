@@ -34,12 +34,14 @@ There are three ways to get started with darkflow.
 
 ## Update
 
-**Android demo on Tensorflow's** [here](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/android/src/org/tensorflow/demo/TensorFlowYoloDetector.java)
+Demo from video file/ webcam is available, also with saving results to an output file. Cython for fast processing is available too.
 
-**I am looking for help:**
+**Android demo is available on Tensorflow's official github!** [here](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/android/src/org/tensorflow/demo/TensorFlowYoloDetector.java)
+
+**I am looking for contributions:**
  - `help wanted` labels in issue track
 
-## Parsing the annotations
+### Parsing the annotations
 
 Skip this if you are not training or fine-tuning anything (you simply want to forward flow a trained net)
 
@@ -53,7 +55,7 @@ pottedplant
 
 And that's it. `darkflow` will take care of the rest.
 
-## Design the net
+### Design the net
 
 Skip this if you are working with one of the original configurations since they are already there. Otherwise, see the following example:
 
@@ -76,7 +78,7 @@ activation = linear
 ...
 ```
 
-## Flowing the graph using `flow`
+### Flowing the graph using `flow`
 
 ```bash
 # Have a look at its options
@@ -119,7 +121,7 @@ JSON output:
  - topleft: pixel coordinate of top left corner of box.
  - bottomright: pixel coordinate of bottom right corner of box.
 
-## Training new model
+### Training new model
 
 Training is simple as you only have to add option `--train`. Training set and annotation will be parsed if this is the first time a new configuration is trained. To point to training set and annotations, use option `--dataset` and `--annotation`. A few examples:
 
@@ -144,7 +146,8 @@ During training, the script will occasionally save intermediate results into Ten
 ./flow --train --model cfg/yolo-tiny.cfg --load bin/yolo-tiny.weights
 ```
 
-## Camera/video file demo
+### Camera/video file demo
+
 
 For a demo that entirely runs on the CPU:
 
@@ -162,32 +165,42 @@ To use your webcam/camera, simply replace `videofile.avi` with keyword `camera`.
 
 To save a video with predicted bounding box, add `--saveVideo` option.
 
-## Using darkflow from another python application
-
+### Using darkflow from another python application
 Please note that `return_predict(img)` must take an `numpy.ndarray`. Your image must be loaded beforehand and passed to `return_predict(img)`. Passing the file path won't work.
 
 Result from `return_predict(img)` will be a list of dictionaries representing each detected object's values in the same format as the JSON output listed above.
 
 ```python
-from darkflow.net.build import TFNet
+from net.build import TFNet
 import cv2
 
 options = {"model": "cfg/yolo.cfg", "load": "bin/yolo.weights", "threshold": 0.1}
 
 tfnet = TFNet(options)
 
-imgcv = cv2.imread("./test/dog.jpg")
+imgcv = cv2.imread("./test/test.jpg")
 result = tfnet.return_predict(imgcv)
 print(result)
 ```
 
-## Migrating the graph to mobile devices (JAVA / C++ / Objective-C++)
+### Save the built graph to a protobuf file (`.pb`)
 
 ```bash
 ## Saving the lastest checkpoint to protobuf file
 ./flow --model cfg/yolo-new.cfg --load -1 --savepb
-```
 
-The name of input tensor and output tensor are respectively `'input'` and `'output'`. For further usage of this protobuf file, please refer to the official documentation of `Tensorflow` on C++ API [_here_](https://www.tensorflow.org/versions/r0.9/api_docs/cc/index.html). To run it on, say, iOS application, simply add the file to Bundle Resources and update the path to this file inside source code.
+## Saving graph and weights to protobuf file
+./flow --model cfg/yolo.cfg --load bin/yolo.weights --savepb
+```
+When saving the `.pb` file a `.meta` file will also be generated alongside it. This `.meta` file is a JSON dump of everything in the `meta` dictionary that contains information nessecary for post-processing such as `anchors` and `labels`. This way, everything you need to make predictions from the graph and do post processing is contained in those two files - no need to have the `.cfg` or any labels file tagging along.
+
+The created `.pb` file can be used to migrate the graph to mobile devices (JAVA / C++ / Objective-C++). The name of input tensor and output tensor are respectively `'input'` and `'output'`. For further usage of this protobuf file, please refer to the official documentation of `Tensorflow` on C++ API [_here_](https://www.tensorflow.org/versions/r0.9/api_docs/cc/index.html). To run it on, say, iOS application, simply add the file to Bundle Resources and update the path to this file inside source code.
+
+Also, darkflow supports loading from a `.pb` and `.meta` file for generating predictions (instead of loading from a `.cfg` and `.ckpt` or `.weights`).
+```bash
+## Forward images in test for predictions based on protobuf file
+./flow --pbLoad graph-cfg/yolo.pb --metaLoad graph-cfg/yolo.meta --test test/
+```
+If you'd like to load a `.pb` and `.meta` file when using `return_predict()` you can set the `"pbLoad"` and `"metaLoad"` options in place of the `"model"` and `"load"` options you would normally set.
 
 That's all.
