@@ -65,7 +65,10 @@ def _get_fps(self, frame):
     processed = self.framework.postprocess(net_out, frame, False)
     return timer() - start
 
-def camera(self, file, SaveVideo):
+def camera(self):
+    file = self.FLAGS.demo
+    SaveVideo = self.FLAGS.saveVideo
+    
     if file == 'camera':
         file = 0
     else:
@@ -73,64 +76,70 @@ def camera(self, file, SaveVideo):
         'file {} does not exist'.format(file)
         
     camera = cv2.VideoCapture(file)
-    
-    if file == 0:
-        self.say('Press [ESC] to quit demo')
-    
     assert camera.isOpened(), \
     'Cannot capture source'
-
-    elapsed = int()
-    start = timer()
     
-    if file == 0:#camera window
-        cv2.namedWindow('', 0)
-        _, frame = camera.read()
-        height, width, _ = frame.shape
-        cv2.resizeWindow('', width, height)
-    else:
-        _, frame = camera.read()
-        height, width, _ = frame.shape
-
+    cv2.namedWindow('', 0)
+    _, frame = camera.read()
+    height, width, _ = frame.shape
+    cv2.resizeWindow('', width, height)
+    
     if SaveVideo:
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        if file == 0:#camera window
+        if file == 0:
           fps = 1 / self._get_fps(frame)
           if fps < 1:
             fps = 1
         else:
             fps = round(camera.get(cv2.CAP_PROP_FPS))
-        videoWriter = cv2.VideoWriter('video.avi', fourcc, fps, (width, height))
+        videoWriter = cv2.VideoWriter(
+			'video.avi', fourcc, fps, (width, height))
 
+	# buffers for demo in batch
+	buffer_inp = list()
+	buffer_pre = list()
+	
+    elapsed = int()
+    start = timer()
+	self.say('Press [ESC] to quit demo')
+	# Loop through frames
     while camera.isOpened():
+		elapsed += 1
         _, frame = camera.read()
         if frame is None:
             print ('\nEnd of Video')
             break
         preprocessed = self.framework.preprocess(frame)
-        feed_dict = {self.inp: [preprocessed]}
-        net_out = self.sess.run(self.out,feed_dict)[0]
-        processed = self.framework.postprocess(net_out, frame, False)
-        if SaveVideo:
-            videoWriter.write(processed)
-        if file == 0:#camera window
-            cv2.imshow('', processed)
-        elapsed += 1
-        if elapsed % 5 == 0:
+		buffer_inp.append(frame)
+		buffer_pre.append(preprocessed)
+		
+		# Only process and imshow when queue is full
+		if elapsed % self.FLAGS.queue == 0:
+			feed_dict = {self.inp: buffer_pre}
+			net_out = self.sess.run(self.out, feed_dict)
+			for img, single_out in zip(buffer_inp, net_out):
+				postprocessed = self.framework.postprocess(
+					net_out, frame, False)
+				if SaveVideo:
+					videoWriter.write(postprocessed)
+				cv2.imshow('', postprocessed)
+			# Clear Buffers
+			buffer_inp = list()
+			buffer_pre = list()
+
+		if elapsed % 5 == 0:
             sys.stdout.write('\r')
             sys.stdout.write('{0:3.3f} FPS'.format(
                 elapsed / (timer() - start)))
             sys.stdout.flush()
-        if file == 0: #camera window
-            choice = cv2.waitKey(1)
-            if choice == 27: break
+        choice = cv2.waitKey(1)
+        if choice == 27: break
 
     sys.stdout.write('\n')
     if SaveVideo:
         videoWriter.release()
     camera.release()
-    if file == 0: #camera window
-        cv2.destroyAllWindows()
+    cv2.destroyAllWindows()
 
 def to_darknet(self):
     darknet_ckpt = self.darknet
