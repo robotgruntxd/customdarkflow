@@ -142,7 +142,10 @@ class TFNet(object):
 			self.summary_op = tf.summary.merge_all()
 			self.writer = tf.summary.FileWriter(self.FLAGS.summary + 'train')
 		
-		self.sess = tf.Session(config = tf.ConfigProto(**cfg))
+
+		config = tf.ConfigProto(**cfg)
+		config.gpu_options.allow_growth = True
+		self.sess = tf.Session(config = config)
 		self.sess.run(tf.global_variables_initializer())
 
 		if not self.ntrain: return
