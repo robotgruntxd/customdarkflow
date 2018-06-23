@@ -5,3 +5,5 @@ while(1):
     ret, frame = vcap.read()
     cv2.imshow('VIDEO', frame)
     cv2.waitKey(1)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break

@@ -18,7 +18,7 @@ def mover(n):
 option = {
     'model': 'cfg/yolo.cfg',
     'load': 'bin/yolo.weights',
-    'threshold': 0.15,
+    'threshold': 0.5,
     'gpu': 1.0
 }
 
@@ -26,7 +26,7 @@ option = {
 
 tfnet = TFNet(option)
 
-capture = cv2.VideoCapture(0)
+capture = cv2.VideoCapture("rtsp://192.168.1.10:554/user=admin&password=&channel=1&stream=0.sdp?real_stream--rtp-caching=100")
 colors = [tuple(255 * np.random.rand(3)) for i in range(5)]
 
 while (capture.isOpened()):
